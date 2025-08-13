@@ -204,11 +204,27 @@ export const appRouter = t.router({
       prompt: z.string().min(3, { message: "Prompt must be at least 3 characters long." })
     }))
     .mutation(async ({ input }) => {
-      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
+      const { data: chatSession, error: sessionError } = await supabaseServer
+        .from("ChatSession")
+        .select("id")
+        .eq("id", input.chatSessionId)
+        .single();
+
+      if (sessionError || !chatSession) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Chat session with ID ${input.chatSessionId} not found.`,
+        });
+      }
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: input.prompt,
+        config: {
+          maxOutputTokens: 150,
+        }
       });
 
       if (!response || !response.text) {
@@ -260,6 +276,7 @@ export const appRouter = t.router({
         contents: input.prompt,
         config: {
           responseModalities: [Modality.TEXT, Modality.IMAGE],
+          maxOutputTokens: 150,
         },
       });
 

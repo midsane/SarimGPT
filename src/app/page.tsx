@@ -222,7 +222,16 @@ export default function ChatbotUI() {
       await generateImageMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
     }
     else {
-      await generateTextMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
+      //prompt 
+      if (!activeSession) {
+        console.error("no active session")
+        return;
+      }
+      let appendedPrompt = ""
+      for (let msg of activeSession?.messages) {
+        appendedPrompt += `${msg.role === "user" ? "User" : "AI"}: ${msg.content}\n`
+      }
+      await generateTextMutation.mutateAsync({ prompt: appendedPrompt, chatSessionId: activeSessionId });
     }
     setIsTyping(false)
     setInputValue("")
