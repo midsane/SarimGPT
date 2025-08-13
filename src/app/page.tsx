@@ -303,8 +303,6 @@ export default function ChatbotUI() {
     return <div className="text-destructive">Authentication failed. Please try again.</div>;
   }
 
-
-
   return (
     <>
       {!fetchedUserData && <SimpleLoader />}
@@ -357,7 +355,7 @@ export default function ChatbotUI() {
       </AnimatePresence>
 
 
-      {!isLoading && <div className="flex h-screen bg-background text-foreground">
+      {!isLoading && <div className="flex h-dvh bg-background text-foreground">
         <div
           className="cursor-pointer z-20 absolute top-[3px] left-10"
         >
@@ -385,7 +383,7 @@ export default function ChatbotUI() {
               animate={{ x: 0 }}
               exit={{ x: -350 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-80 fixed z-10 top-0 left-0 min-h-screen py-10 bg-sidebar border-r border-sidebar-border flex flex-col"
+              className="w-80 fixed z-10 top-0 left-0 min-h-dvh py-10 bg-sidebar border-r border-sidebar-border flex flex-col"
             >
               {/* Chat History */}
               <ScrollArea className="flex-1 p-2">
@@ -593,7 +591,7 @@ export default function ChatbotUI() {
 
 
 const SimpleLoader = () => {
-  return (<div className='h-screen w-screen fixed z-50 bg-background/70 flex gap-2 flex-col justify-center items-center' >
+  return (<div className='h-dvh w-screen fixed z-50 bg-background/70 flex gap-2 flex-col justify-center items-center' >
     <h1>Just a Second...</h1>
     <LoaderIcon className='animate-spin repeat-infinite ease-in ' />
   </div>)
