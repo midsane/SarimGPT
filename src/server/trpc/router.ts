@@ -220,7 +220,7 @@ export const appRouter = t.router({
 
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         contents: input.prompt,
         config: {
           maxOutputTokens: 150,
@@ -272,7 +272,7 @@ export const appRouter = t.router({
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-preview-image-generation",
+        model: "imagen-4.0-generate-preview-06-06",
         contents: input.prompt,
         config: {
           responseModalities: [Modality.TEXT, Modality.IMAGE],

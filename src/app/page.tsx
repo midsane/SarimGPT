@@ -148,7 +148,6 @@ export default function ChatbotUI() {
     }
   });
 
-
   const generateTextMutation = trpc.generateText.useMutation({
     onSuccess: (data) => {
       console.log("Text generated successfully:", data);
@@ -173,6 +172,10 @@ export default function ChatbotUI() {
         })
         return newState
       })
+    },
+    onError: (error) => {
+      console.error("Error generating text:", error);
+      toast.error("Failed to generate text. Please try again.");
     }
   });
 
@@ -200,6 +203,10 @@ export default function ChatbotUI() {
         })
         return newState
       })
+    },
+    onError: (error) => {
+      console.error("Error creating message:", error);
+      toast.error("Failed to send message. Please try again.");
     }
   });
 
