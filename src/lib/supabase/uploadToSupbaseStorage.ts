@@ -2,7 +2,7 @@ import { supabaseServer } from "./supabaseServerClient";
 
 export const uploadToSupabaseBucket = async (imageData: string): Promise<string | null> => {
 
-    const filename = `img_${Date.now()}.png`;
+    const filename = `Image_${Date.now()}.png`;
     const buffer = Buffer.from(imageData, "base64");
     const bucketName = 'midgpt-image';
 

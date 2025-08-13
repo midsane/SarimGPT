@@ -19,10 +19,8 @@ import {
   X,
   MoreHorizontal,
   ImageIcon,
-  Plus,
   MessageSquare,
   Menu,
-  Trash,
   LoaderIcon,
   Loader2,
   Download,
@@ -35,9 +33,9 @@ import { NotAuthorisedDialogBox } from "@/components/dialogBox"
 import { trpc } from "@/util/trpc"
 import { toast } from "sonner"
 import { PageLoader } from "@/components/pageLoader"
-import { ChatSession, formatTime, Message, userStateFiltered } from '@/util/chatbotUtility';
+import { ChatSession, formatTime, userStateFiltered } from '@/util/chatbotUtility';
 
-
+import Image from "next/image"
 
 export default function ChatbotUI() {
 
@@ -256,9 +254,7 @@ export default function ChatbotUI() {
     },
   });
 
-
-
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleLogin = async () => {
@@ -323,7 +319,7 @@ export default function ChatbotUI() {
               onClick={(e) => e.stopPropagation()} // Prevent closing modal when clicking on the content
               className="relative bg-card p-4 rounded-xl shadow-2xl max-w-4xl max-h-[90vh] flex flex-col gap-4 cursor-default"
             >
-              <img
+              <Image
                 src={enlargedImageUrl}
                 alt="Enlarged view"
                 className="object-contain w-full h-full max-w-full max-h-[calc(90vh-100px)]"
@@ -356,7 +352,9 @@ export default function ChatbotUI() {
         <div
           className="cursor-pointer z-20 absolute top-[3px] left-10"
         >
-          <img src={"/chatgpt.png"} alt="Logo" className="w-9 h-9" />
+          <Image src={"/chatgpt.png"}
+            width={32} height={32}
+            alt="Logo" />
         </div>
         {!isAuthenticated && <div
           className="fixed top-0 left-0 w-full h-full bg-background/70 flex items-center justify-center z-50"
@@ -444,7 +442,7 @@ export default function ChatbotUI() {
         <div className="flex-1 flex flex-col pt-10">
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-3xl mx-auto space-y-6">
-              {activeSession?.messages.map((message, index) => (
+              {activeSession?.messages.map((message) => (
                 <div
                   key={message.id}
                   className={cn(
@@ -455,7 +453,8 @@ export default function ChatbotUI() {
                   {message.role === "assistant" && (
 
                     <Avatar className="w-8 h-8 mt-1">
-                      <AvatarImage src={"/chatgpt.png"} />
+                      <AvatarImage src={"/chatgpt.png"}
+                        width={32} height={32} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                         AI
                       </AvatarFallback>
@@ -486,7 +485,7 @@ export default function ChatbotUI() {
 
                     {message.fileUrl && message.fileUrl?.trim() !== "" && (
                       <div className='rounded-xl relative w-fit'>
-                        <img
+                        <Image
                           src={message.fileUrl}
                           alt="Generated"
                           className="max-w-40 rounded-xl "
@@ -516,7 +515,9 @@ export default function ChatbotUI() {
                 <div className="flex gap-4 justify-start">
 
                   <Avatar className="w-8 h-8 mt-1">
-                    <AvatarImage src="/chatgpt.png" alt={userState?.username} />
+                    <AvatarImage src="/chatgpt.png"
+                      width={32} height={32}
+                      alt={userState?.username} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                       MidGPT
                     </AvatarFallback>

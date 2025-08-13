@@ -2,19 +2,13 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { LogIn } from "lucide-react";
 
-// Example: A polished Dialog component using shadcn/ui primitives.
-// - Default uncontrolled behavior (DialogTrigger handles opening)
-// - Includes form elements, close action, and an optional controlled example
+import Image from "next/image"
 
 export function NotAuthorisedDialogBox({ login, signup }: { login: () => void, signup: () => void }) {
   return (
@@ -23,7 +17,13 @@ export function NotAuthorisedDialogBox({ login, signup }: { login: () => void, s
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex justify-start gap-2 items-center">
-              <img className="w-10 aspect-square" src={"/chatgpt.png"} />
+              <Image
+                width={32}
+                height={32}
+                className="w-10 aspect-square"
+                src={"/chatgpt.png"}
+                alt="MidGPT logo"
+              />
               <p>MidGPT</p>
             </DialogTitle>
             <DialogDescription>

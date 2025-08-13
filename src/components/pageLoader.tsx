@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface PageLoaderProps {
   isLoading?: boolean
@@ -51,7 +52,9 @@ export function PageLoader({ isLoading = true, onComplete }: PageLoaderProps) {
         {/* Logo/Brand Area */}
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <img src="/chatgpt.png" />
+            <Image 
+            width={32} height={32}
+            src="/chatgpt.png" alt="MidGPT Logo" />
           </div>
 
           {/* Animated rings */}

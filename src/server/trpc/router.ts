@@ -61,6 +61,8 @@ export const appRouter = t.router({
           console.error('Error fetching chat sessions:', error);
         }
 
+        /* eslint-disable */
+
         console.log("Fetched chat sessions:", data);
         return {
           data: {
@@ -197,9 +199,10 @@ export const appRouter = t.router({
 
 
   generateText: t.procedure
-    .input(z.object({ 
+    .input(z.object({
       chatSessionId: z.number(),
-      prompt: z.string().min(3, { message: "Prompt must be at least 3 characters long." }) }))
+      prompt: z.string().min(3, { message: "Prompt must be at least 3 characters long." })
+    }))
     .mutation(async ({ input }) => {
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
