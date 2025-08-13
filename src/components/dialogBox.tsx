@@ -24,7 +24,7 @@ export function NotAuthorisedDialogBox({ login, signup }: { login: () => void, s
           <DialogHeader>
             <DialogTitle className="flex justify-start gap-2 items-center">
               <img className="w-10 aspect-square" src={"/chatgpt.png"} />
-              <h1>MidGPT</h1>
+              <p>MidGPT</p>
             </DialogTitle>
             <DialogDescription>
               MidGPT is your AI-powered multimodal companion, designed to assist you with a wide range of tasks and queries.

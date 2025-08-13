@@ -1,12 +1,11 @@
 "use client"
-
+import { v4 as uuidv4 } from 'uuid';
 import type React from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import favicon from "../../public/chatgpt.png"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
+
 import {
   ArrowUp,
   X,
@@ -22,7 +22,11 @@ import {
   Plus,
   MessageSquare,
   Menu,
-  Trash
+  Trash,
+  LoaderIcon,
+  Loader2,
+  Download,
+  EllipsisVertical
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/toggle-theme"
@@ -31,117 +35,26 @@ import { NotAuthorisedDialogBox } from "@/components/dialogBox"
 import { trpc } from "@/util/trpc"
 import { toast } from "sonner"
 import { PageLoader } from "@/components/pageLoader"
+import { ChatSession, formatTime, Message, userStateFiltered } from '@/util/chatbotUtility';
 
 
-
-interface Message {
-  id: string
-  content?: string
-  fileUrl?: string,
-  role: "user" | "assistant"
-  timestamp: Date
-}
-
-interface ChatSession {
-  id: string
-  title: string
-  messages: Message[]
-  lastMessage: Date
-}
-
-interface userState {
-  pfp_url: string,
-  email: string,
-  username: string,
-  id: number
-}
-
-type userStateFiltered = Partial<userState> | null
 
 export default function ChatbotUI() {
 
   const [userState, setUserState] = useState<userStateFiltered>()
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    {
-      id: "1",
-      title: "Getting Started",
-      messages: [
-        {
-          id: "1",
-          content: "Hello! How can I help you today?",
-          role: "assistant",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30)
-        }
-      ],
-      lastMessage: new Date(Date.now() - 1000 * 60 * 30)
-    },
-    {
-      id: "2",
-      title: "Web Development Tips",
-      messages: [
-        {
-          id: "2",
-          content: "Can you help me with React components?",
-          role: "user",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60)
-        },
-        {
-          id: "3",
-          content:
-            "Of course! I'd be happy to help you with React components. What specific aspect would you like to learn about?",
-          role: "assistant",
-          timestamp: new Date(Date.now() - 1000 * 60 * 58)
-        }
-      ],
-      lastMessage: new Date(Date.now() - 1000 * 60 * 58)
-    }
-  ])
-
-  const [activeSessionId, setActiveSessionId] = useState<string>("1")
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [inputValue, setInputValue] = useState("")
+  const [fetchedUserData, setFetchedUserData] = useState(true)
+  const [creatingUserMsg, setCreatingUserMsg] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null | undefined>(null); // ✨ NEW/MODIFIED: State for enlarged image URL
+
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [textareaRows, setTextareaRows] = useState(1)
-  const [isGenerating, setIsGenerating] = useState(false)
-
-  const [imageGenerationEnabled, setImageGenerationEnabled] = useState(false)
-  const activeSession = chatSessions.find((s) => s.id === activeSessionId)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [activeSession?.messages, activeSessionId])
-
-
-  const handleSubmit = async () => {
-    sendMessage();
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }
-
-  const createNewChat = () => {
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: "New Chat",
-      messages: [],
-      lastMessage: new Date()
-    }
-    setChatSessions((prev) => [newSession, ...prev])
-    setActiveSessionId(newSession.id)
-  }
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textareaLineHeight = 20
@@ -159,31 +72,164 @@ export default function ChatbotUI() {
     setInputValue(e.target.value)
   }
 
+  const [imageGenerationEnabled, setImageGenerationEnabled] = useState(false)
+  const activeSession = chatSessions.find((s) => s.id === activeSessionId)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [activeSession?.messages, activeSessionId, creatingUserMsg])
+
+
+  const handleDownloadImage = async (url: string) => {
+    if (!url) return;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok.");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = blobUrl;
+      a.download = `midgpt-image-${uuidv4()}.png`; // Uses uuid for a unique filename
+      document.body.appendChild(a);
+      a.click();
+
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+      toast.success("Image download started!");
+    } catch (error) {
+      console.error("Could not download the image:", error);
+      toast.error("Image download failed.");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (inputValue?.trim() === "" || creatingUserMsg || isTyping) {
+      console.log("TextArea disabled")
+      return;
+    }
+    sendMessage();
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
 
   const generateImageMutation = trpc.generateImage.useMutation({
     onSuccess: (data) => {
       console.log("Image generated successfully:", data);
-      // You may want to add this message to the chat session here
+      setChatSessions(prev => {
+        const newState = prev.map(session => {
+          if (session.id === activeSessionId) {
+            return {
+              ...session,
+              messages: [
+                ...session.messages,
+                {
+                  id: data.id,
+                  content: data.content,
+                  fileUrl: data.fileUrl,
+                  role: data.role,
+                  timestamp: data.timestamp
+                }
+              ]
+            }
+          }
+          return session
+        })
+        return newState
+      })
     }
   });
+
 
   const generateTextMutation = trpc.generateText.useMutation({
     onSuccess: (data) => {
       console.log("Text generated successfully:", data);
-      // You may want to add this message to the chat session here
+      setChatSessions(prev => {
+        const newState = prev.map(session => {
+          if (session.id === activeSessionId) {
+            return {
+              ...session,
+              messages: [
+                ...session.messages,
+                {
+                  id: data.id,
+                  content: data.content,
+                  fileUrl: data.fileUrl,
+                  role: data.role,
+                  timestamp: data.timestamp
+                }
+              ]
+            }
+          }
+          return session
+        })
+        return newState
+      })
     }
   });
 
+  const createMessageMutation = trpc.createMessage.useMutation({
+    onSuccess: (data) => {
+      console.log("Message created successfully:", data);
+      setChatSessions(prev => {
+        const newState = prev.map(session => {
+          if (session.id === activeSessionId) {
+            return {
+              ...session,
+              messages: [
+                ...session.messages,
+                {
+                  id: data.data.id,
+                  content: data.data.content,
+                  fileUrl: data.data.fileUrl,
+                  role: data.data.role,
+                  timestamp: data.data.timestamp
+                }
+              ]
+            }
+          }
+          return session
+        })
+        return newState
+      })
+    }
+  });
+
+
   const sendMessage = async () => {
+    if (!activeSessionId) {
+      toast.error("No active chat session found. Please start a new chat.")
+      return;
+    }
+    console.log("Sending message:", inputValue);
+
+    setCreatingUserMsg(true)
+    setInputValue("")
+
+    await createMessageMutation.mutateAsync({ content: inputValue, fileUrl: "", role: "user", chatSessionId: activeSessionId });
+    setIsTyping(true);
+    setCreatingUserMsg(false)
+
     if (imageGenerationEnabled) {
-     
-      generateImageMutation.mutate({ prompt: inputValue });
+      await generateImageMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
     }
     else {
-      generateTextMutation.mutate({ prompt: inputValue });
+      await generateTextMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
     }
-     setInputValue("")
+    setIsTyping(false)
+    setInputValue("")
   }
+
 
   const {
     isLoading,
@@ -200,27 +246,24 @@ export default function ChatbotUI() {
   const logout = () =>
     auth0Logout({ logoutParams: { returnTo: window.location.origin } });
 
-
   const createUserMutation = trpc.createUser.useMutation({
     onSuccess: (data) => {
       console.log("Mutation succeeded! Message from server:", data.message);
-      console.log("User Profile:", data.data);
-      if (data.message === "User already exists") {
-        toast.success("Logged in successfully")
-      } else {
-        toast.success("Signed up sucessfully")
-      }
-      setUserState(data.data)
+      console.log("User Profile:", data.data.user);
     },
-
     onError: (error) => {
       console.error("An unexpected error occurred:", error.message);
     },
   });
 
+
+
+
+
   useEffect(() => {
     const handleLogin = async () => {
       if (!user?.email) return;
+      setFetchedUserData(false)
 
       try {
         const result = await createUserMutation.mutateAsync({
@@ -229,17 +272,86 @@ export default function ChatbotUI() {
           picture: user.picture || "https://www.tubespace.studio/assets/pfp-D0tydQpd.png",
         });
 
+        if (result.message === "User already exists") {
+          toast.success("Logged in successfully")
+        } else {
+          toast.success("Signed up sucessfully")
+        }
+        setUserState(result.data.user)
+        setChatSessions(result.data.allChatSessions);
+        setActiveSessionId(result.data.allChatSessions[result.data.allChatSessions.length - 1]?.id);
+
       } catch (error) {
         console.error("Mutation failed:", error);
       }
+      setFetchedUserData(true)
     };
 
-    handleLogin();
+    if (isAuthenticated) {
+      handleLogin();
+    }
+
   }, [isAuthenticated, user]);
+
+  if (error) {
+    console.error("Authentication error:", error);
+    return <div className="text-destructive">Authentication failed. Please try again.</div>;
+  }
+
+
 
   return (
     <>
-      < PageLoader isLoading={isLoading} onComplete={() => { }} />
+      {!fetchedUserData && <SimpleLoader />}
+      <PageLoader isLoading={isLoading} onComplete={() => { }} />
+
+      {/* ✨ NEW/MODIFIED: Image Enlarge Modal */}
+      <AnimatePresence>
+        {enlargedImageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setEnlargedImageUrl(null)}
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()} // Prevent closing modal when clicking on the content
+              className="relative bg-card p-4 rounded-xl shadow-2xl max-w-4xl max-h-[90vh] flex flex-col gap-4 cursor-default"
+            >
+              <img
+                src={enlargedImageUrl}
+                alt="Enlarged view"
+                className="object-contain w-full h-full max-w-full max-h-[calc(90vh-100px)]"
+              />
+              <div className="flex justify-center items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadImage(enlargedImageUrl)}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  Download
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setEnlargedImageUrl(null)}
+                  className="flex items-center gap-2"
+                >
+                  <X className="w-5 h-5" />
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
       {!isLoading && <div className="flex h-screen bg-background text-foreground">
         <div
           className="cursor-pointer z-20 absolute top-[3px] left-10"
@@ -268,18 +380,6 @@ export default function ChatbotUI() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="w-80 fixed z-10 top-0 left-0 min-h-screen py-10 bg-sidebar border-r border-sidebar-border flex flex-col"
             >
-              {/* New Chat */}
-              <div className="p-4 border-b border-sidebar-border">
-                <Button
-                  onClick={createNewChat}
-                  className="w-full justify-start gap-2 bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-accent-foreground"
-                  variant="ghost"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Chat
-                </Button>
-              </div>
-
               {/* Chat History */}
               <ScrollArea className="flex-1 p-2">
                 <div className="space-y-1">
@@ -299,10 +399,9 @@ export default function ChatbotUI() {
                             {session.title}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatTime(session.lastMessage)}
+                            {formatTime(session.timestamp)}
                           </p>
                         </div>
-                        <Trash className="w-4 h-4 text-muted-foreground" />
                       </div>
                     </button>
                   ))}
@@ -345,7 +444,7 @@ export default function ChatbotUI() {
         <div className="flex-1 flex flex-col pt-10">
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-3xl mx-auto space-y-6">
-              {activeSession?.messages.map((message) => (
+              {activeSession?.messages.map((message, index) => (
                 <div
                   key={message.id}
                   className={cn(
@@ -362,25 +461,42 @@ export default function ChatbotUI() {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div
-                    className={cn(
-                      "max-w-[70%] rounded-2xl px-4 py-3 text-sm border border-border",
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground ml-auto"
-                        : "bg-card text-card-foreground"
-                    )}
-                  >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p
+                  <div className='flex flex-col gap-4'>
+                    <div
                       className={cn(
-                        "text-xs mt-2 opacity-70",
+                        "max-w-[70%] min-w-[200px] rounded-2xl px-4 py-3 text-sm border border-border ",
                         message.role === "user"
-                          ? "text-primary-foreground/70"
-                          : "text-muted-foreground"
+                          ? "bg-primary text-primary-foreground ml-auto"
+                          : "bg-card text-card-foreground"
                       )}
                     >
-                      {formatTime(message.timestamp)}
-                    </p>
+                      <p className="whitespace-pre-wrap w-full">{message.content} </p>
+                      <p
+                        className={cn(
+                          "text-xs mt-2 opacity-70",
+                          message.role === "user"
+                            ? "text-primary-foreground/70"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {formatTime(message.timestamp)}
+                      </p>
+                    </div>
+
+
+                    {message.fileUrl && message.fileUrl?.trim() !== "" && (
+                      <div className='rounded-xl relative w-fit'>
+                        <img
+                          src={message.fileUrl}
+                          alt="Generated"
+                          className="max-w-40 rounded-xl "
+
+                        />
+                        <EllipsisVertical
+                          onClick={() => setEnlargedImageUrl(message.fileUrl)}
+                          size={25} className='absolute bottom-1 cursor-pointer  p-1 bg-background/60 rounded-sm right-1' />
+                      </div>
+                    )}
                   </div>
                   {message.role === "user" && (
                     <Avatar className="w-8 h-8 mt-1">
@@ -390,14 +506,19 @@ export default function ChatbotUI() {
                       </AvatarFallback>
                     </Avatar>
                   )}
+
                 </div>
               ))}
+              {creatingUserMsg && <div className='w-full flex justify-end items-center'>
+                <Loader2 className=' animate-spin repeat-infinite' /></div>}
 
               {isTyping && (
                 <div className="flex gap-4 justify-start">
+
                   <Avatar className="w-8 h-8 mt-1">
+                    <AvatarImage src="/chatgpt.png" alt={userState?.username} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                      AI
+                      MidGPT
                     </AvatarFallback>
                   </Avatar>
                   <div className="bg-card border border-border rounded-2xl px-4 py-3">
@@ -444,7 +565,7 @@ export default function ChatbotUI() {
 
                   <Button
                     onClick={handleSubmit}
-                    disabled={!inputValue.trim()}
+                    disabled={!inputValue.trim() || isTyping || creatingUserMsg}
                     size="sm"
                     className="w-8 h-8 p-0 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:border-primary border disabled:text-muted-foreground"
                   >
@@ -458,4 +579,12 @@ export default function ChatbotUI() {
       </div>}
     </>
   )
+}
+
+
+const SimpleLoader = () => {
+  return (<div className='h-screen w-screen fixed z-50 bg-background/70 flex gap-2 flex-col justify-center items-center' >
+    <h1>Just a Second...</h1>
+    <LoaderIcon className='animate-spin repeat-infinite ease-in ' />
+  </div>)
 }
