@@ -228,7 +228,7 @@ export default function ChatbotUI() {
         return;
       }
       let appendedPrompt = ""
-      for (let msg of activeSession?.messages) {
+      for (const msg of activeSession?.messages) {
         appendedPrompt += `${msg.role === "user" ? "User" : "AI"}: ${msg.content}\n`
       }
       await generateTextMutation.mutateAsync({ prompt: appendedPrompt, chatSessionId: activeSessionId });
