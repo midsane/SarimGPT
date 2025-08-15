@@ -234,7 +234,7 @@ export default function ChatbotUI() {
         console.error("no active session")
         return;
       }
-      let appendedPrompt: { role: "user" | "assistant"; content: string }[] = [];
+      const appendedPrompt: { role: "user" | "assistant"; content: string }[] = [];
       for (const msg of activeSession?.messages ?? []) {
         if (msg.role === "user") {
           appendedPrompt.push({ role: "user", content: msg.content ?? "" });
