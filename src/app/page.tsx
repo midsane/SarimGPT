@@ -126,6 +126,10 @@ export default function ChatbotUI() {
         })
         return newState
       })
+    },
+    onError: (error) => {
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate image. Please try again.");
     }
   });
 
@@ -153,6 +157,11 @@ export default function ChatbotUI() {
         })
         return newState
       })
+    },
+
+    onError: (error) => {
+      console.error("Error generating video:", error);
+      toast.error("Failed to generate video. Please try again.");
     }
   });
 
@@ -213,7 +222,7 @@ export default function ChatbotUI() {
       })
     },
     onError: (error) => {
-      console.error("Error creating message:", error);
+      console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
     }
   });

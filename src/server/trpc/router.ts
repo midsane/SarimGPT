@@ -63,8 +63,6 @@ export const appRouter = t.router({
           `)
           .eq("userId", existingUser.id);
 
-
-
         if (error) {
           console.error('Error fetching chat sessions:', error);
         }
