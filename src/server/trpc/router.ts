@@ -367,7 +367,7 @@ export const appRouter = t.router({
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
       let operation = await ai.models.generateVideos({
-        model: "veo-3.0-generate-preview",
+        model: "veo-2.0-generate-001",
         prompt: input.prompt,
       });
 

@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+// lib/supabaseClient.ts
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// This client is for use in Client Components in the App Router
+export const supabase = createClientComponentClient()
