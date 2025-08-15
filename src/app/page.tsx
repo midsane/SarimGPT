@@ -214,7 +214,7 @@ export default function ChatbotUI() {
 
       setHasSyncedProfile(true);
       setFetchedUserData(false);
-
+      // eslint-disable-next-line no-useless-catch
       try {
         const result = await createUserMutation.mutateAsync({
           email: user.email,
@@ -228,10 +228,17 @@ export default function ChatbotUI() {
         } else {
           toast.success("Welcome back!");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         setHasSyncedProfile(false);
-        console.log("An unexpected error occurred:", error.message);
-        toast.error("Failed to sync user profile.");
+        if (error instanceof Error) {
+          // Now TypeScript knows `error` has a `message` property
+          console.error("An unexpected error occurred:", error.message);
+          toast.error("Failed to sync user profile.");
+        } else {
+          // Handle cases where the thrown value is not an Error object
+          console.error("An unexpected, non-error value was thrown:", error);
+          toast.error("An unknown error occurred while syncing user profile.");
+        }
       } finally {
         setFetchedUserData(true);
       }
