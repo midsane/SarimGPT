@@ -147,7 +147,7 @@ export const appRouter = t.router({
     }),
 
   deleteChatSession: t.procedure
-    .input(z.object({ chatSessionId: z.int() }))
+    .input(z.object({ chatSessionId: z.number().int() }))
     .mutation(async ({ input }) => {
       const { data, error } = await supabaseServer
         .from("ChatSession")
@@ -160,7 +160,7 @@ export const appRouter = t.router({
   createMessage: t.procedure
     .input(z.object({
       content: z.string().min(1).optional(),
-      chatSessionId: z.int(),
+      chatSessionId: z.number().int(),
       fileUrl: z.string().optional(),
       role: z.string().min(1)
     }))
@@ -181,7 +181,7 @@ export const appRouter = t.router({
 
   fetchMessages: t.procedure
     .input(z.object({
-      chatSessionId: z.int(),
+      chatSessionId: z.number().int(),
     }))
     .query(async ({ input }) => {
       const { data, error } = await supabaseServer.from("Message")
@@ -193,7 +193,7 @@ export const appRouter = t.router({
 
   fetchChatSessions: t.procedure
     .input(z.object({
-      userId: z.int(),
+      userId: z.number().int(),
     }))
     .query(async ({ input }) => {
       const { data, error } = await supabaseServer.from("user")
