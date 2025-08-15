@@ -239,12 +239,12 @@ export const appRouter = t.router({
       const completion = await openai.chat.completions.create({
         model: "shivaay",
         messages: [
-          { role: "system", content: "You are a helpful assistant." },
+          { role: "system", content: "You are a helpful assistant. your name is SarimGPT" },
           ...input.prompt
         ],
       });
 
-      const content = completion.choices[0].message
+      const content = completion.choices[0].message?.content
 
       if (!content) {
         throw new TRPCError({
