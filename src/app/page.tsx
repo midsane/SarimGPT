@@ -269,11 +269,11 @@ export default function ChatbotUI() {
       {/* The main UI is now protected by both `!isLoading` AND `isAuthenticated` */}
       {!isLoading && isAuthenticated && (
         <div className="flex h-dvh bg-background text-foreground">
-          <div className="cursor-pointer z-20 absolute top-[3px] left-10">
+          <div className="cursor-pointer z-20 absolute top-[7px] left-10">
             <Image src="/chatgpt.png" className='rounded-md' width={32} height={32} alt="Logo" />
           </div>
 
-          <div className="cursor-pointer z-20 absolute top-2 right-2" > <ModeToggle /></div>
+          <div className="cursor-pointer z-20 absolute top-[8px] right-2" > <ModeToggle /></div>
           <div onClick={() => setSidebarOpen((p) => !p)} className="cursor-pointer z-20 absolute top-2 left-2">
             {sidebarOpen ? <X /> : <Menu />}
           </div>

@@ -51,7 +51,7 @@ export function EmailAuthDialog({ onSignIn, onSignUp, onGoogleSignIn }: EmailAut
   return (
     <Dialog open={true}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader className="text-center">
+        <DialogHeader className="text-center w-full flex justify-center items-center">
           <Image
             alt="SarimGPT"
             width={30}
@@ -66,6 +66,8 @@ export function EmailAuthDialog({ onSignIn, onSignUp, onGoogleSignIn }: EmailAut
         <div className="grid gap-2 py-2">
           <Button variant="outline" type="button" onClick={handleGoogleClick} disabled={!!loading}>
             {loading === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Image
+            width={10}
+            height={10}
             alt="Google Auth"
             className="w-5" src={"/icons8-google.svg"} />}
             Continue with Google
