@@ -16,18 +16,18 @@ export function NotAuthorisedDialogBox({ login, signup }: { login: () => void, s
       <Dialog open={true} >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex justify-start gap-2 items-center">
+            <DialogTitle className="flex justify-start gap-2 items-end mb-4">
               <Image
                 width={32}
                 height={32}
-                className="w-10 aspect-square"
+                className="w-10 aspect-square rounded-md"
                 src={"/chatgpt.png"}
-                alt="MidGPT logo"
+                alt="SarimGPT logo"
               />
-              <p>MidGPT</p>
+              <p>SarimGPT</p>
             </DialogTitle>
             <DialogDescription>
-              MidGPT is your AI-powered multimodal companion, designed to assist you with a wide range of tasks and queries.
+              SarimGPT is your AI-powered multimodal companion, designed to assist you with a wide range of tasks and queries.
               Please register or login to use the features of this website.
 
             </DialogDescription>

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MidGPT",
+  title: "SarimGPT",
   description: "Your AI-powered Multimodel companion",
 };
 

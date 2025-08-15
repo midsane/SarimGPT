@@ -93,7 +93,7 @@ export default function ChatbotUI() {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = blobUrl;
-      a.download = `midgpt-image-${uuidv4()}.png`; // Uses uuid for a unique filename
+      a.download = `Sarimgpt-image-${uuidv4()}.png`; // Uses uuid for a unique filename
       document.body.appendChild(a);
       a.click();
 
@@ -234,9 +234,13 @@ export default function ChatbotUI() {
         console.error("no active session")
         return;
       }
-      let appendedPrompt = ""
-      for (const msg of activeSession?.messages) {
-        appendedPrompt += `${msg.role === "user" ? "User" : "AI"}: ${msg.content}\n`
+      let appendedPrompt: { role: "user" | "assistant"; content: string }[] = [];
+      for (const msg of activeSession?.messages ?? []) {
+        if (msg.role === "user") {
+          appendedPrompt.push({ role: "user", content: msg.content ?? "" });
+        } else {
+          appendedPrompt.push({ role: "assistant", content: msg.content ?? "" });
+        }
       }
       await generateTextMutation.mutateAsync({ prompt: appendedPrompt, chatSessionId: activeSessionId });
     }
@@ -367,6 +371,7 @@ export default function ChatbotUI() {
           className="cursor-pointer z-20 absolute top-[3px] left-10"
         >
           <Image src={"/chatgpt.png"}
+            className='rounded-md'
             width={32} height={32}
             alt="Logo" />
         </div>
@@ -533,7 +538,7 @@ export default function ChatbotUI() {
                       width={32} height={32}
                       alt={userState?.username} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                      MidGPT
+                      SarimGPT
                     </AvatarFallback>
                   </Avatar>
                   <div className="bg-card border border-border rounded-2xl px-4 py-3">

@@ -4,6 +4,12 @@ import { supabaseServer } from "@/lib/supabase/supabaseServerClient";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { uploadToSupabaseBucket } from "@/lib/supabase/uploadToSupbaseStorage";
 
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.SHIVAAY_API_KEY,
+  baseURL: 'https://api.futurixai.com/api/shivaay/v1'
+});
 
 const t = initTRPC.create();
 
@@ -201,7 +207,10 @@ export const appRouter = t.router({
   generateText: t.procedure
     .input(z.object({
       chatSessionId: z.number(),
-      prompt: z.string().min(3, { message: "Prompt must be at least 3 characters long." })
+      prompt: z.array(z.object({
+        role: z.enum(["system", "user", "assistant"]),
+        content: z.string()
+      }))
     }))
     .mutation(async ({ input }) => {
 
@@ -218,16 +227,26 @@ export const appRouter = t.router({
         });
       }
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: input.prompt,
-        config: {
-          maxOutputTokens: 150,
-        }
+      // const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
+      // const response = await ai.models.generateContent({
+      //   model: "gemini-2.5-flash",
+      //   contents: input.prompt,
+      //   config: {
+      //     maxOutputTokens: 150,
+      //   }
+      // });
+
+      const completion = await openai.chat.completions.create({
+        model: "shivaay",
+        messages: [
+          { role: "system", content: "You are a helpful assistant." },
+          ...input.prompt
+        ],
       });
 
-      if (!response || !response.text) {
+      const content = completion.choices[0].message
+
+      if (!content) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to generate content",
@@ -235,7 +254,7 @@ export const appRouter = t.router({
       }
 
       const message = await supabaseServer.from("Message").insert({
-        content: response.text,
+        content,
         fileUrl: "",
         role: "assistant",
         chatSessionId: input.chatSessionId
@@ -272,11 +291,10 @@ export const appRouter = t.router({
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
       const response = await ai.models.generateContent({
-        model: "imagen-4.0-generate-preview-06-06",
+        model: "gemini-2.0-flash-preview-image-generation",
         contents: input.prompt,
         config: {
           responseModalities: [Modality.TEXT, Modality.IMAGE],
-          maxOutputTokens: 150,
         },
       });
 

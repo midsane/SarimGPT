@@ -1,1 +1,1 @@
-https://midgpt.vercel.app/
+https://SarimGPT.vercel.app/
