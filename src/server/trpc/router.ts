@@ -2,9 +2,11 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/supabaseServerClient";
 import { GoogleGenAI, Modality } from "@google/genai";
-import { uploadToSupabaseBucket } from "@/lib/supabase/uploadToSupbaseStorage";
+import { uploadImageToSupabaseBucket } from "@/lib/supabase/uploadToSupbaseStorage";
 
 import OpenAI from 'openai';
+import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
 
 const openai = new OpenAI({
   apiKey: process.env.SHIVAAY_API_KEY,
@@ -203,7 +205,6 @@ export const appRouter = t.router({
       return data;
     }),
 
-
   generateText: t.procedure
     .input(z.object({
       chatSessionId: z.number(),
@@ -274,7 +275,6 @@ export const appRouter = t.router({
     )
     .mutation(async ({ input }) => {
 
-      //check if chatSessionId exists
       const { data: chatSession, error: sessionError } = await supabaseServer
         .from("ChatSession")
         .select("id")
@@ -313,7 +313,7 @@ export const appRouter = t.router({
           } else if (part.inlineData) {
             const imageData = part.inlineData.data;
             if (typeof imageData === "string") {
-              const imageUrl = await uploadToSupabaseBucket(imageData)
+              const imageUrl = await uploadImageToSupabaseBucket(imageData)
 
               console.log("content:", messageContent)
               console.log("fileUrl:", imageUrl);
@@ -342,6 +342,95 @@ export const appRouter = t.router({
       });
 
 
+    }),
+
+  generateVideo: t.procedure
+    .input(
+      z.object({
+        chatSessionId: z.number(),
+        prompt: z.string().min(3, { message: "Prompt must be at least 3 characters long." }),
+      })
+    )
+    .mutation(async ({ input }) => {
+
+      const { data: chatSession, error: sessionError } = await supabaseServer
+        .from("ChatSession")
+        .select("id")
+        .eq("id", input.chatSessionId)
+        .single();
+
+      if (sessionError || !chatSession) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Chat session with ID ${input.chatSessionId} not found.`,
+        });
+      }
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
+
+      let operation = await ai.models.generateVideos({
+        model: "veo-3.0-generate-preview",
+        prompt: input.prompt,
+      });
+
+      const downloadPath = uuidv4() + '.mp4';
+
+      while (!operation.done) {
+        console.log("Waiting for video generation to complete...")
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        operation = await ai.operations.getVideosOperation({
+          operation: operation,
+        });
+      }
+
+      if (
+        operation.response &&
+        Array.isArray(operation.response.generatedVideos) &&
+        operation.response.generatedVideos[0] &&
+        operation.response.generatedVideos[0].video
+      ) {
+        await ai.files.download({
+          file: operation.response.generatedVideos[0].video,
+          downloadPath: downloadPath,
+        });
+
+        const videoFile = fs.readFileSync(downloadPath);
+
+        const { error: uploadError } = await supabaseServer.storage
+          .from("videos-bucket")
+          .upload(downloadPath, videoFile, {
+            contentType: 'video/mp4', 
+          });
+
+
+        if (uploadError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to upload video to Supabase",
+          });
+        }
+
+        const publicUrl = supabaseServer.storage
+          .from("videos-bucket")
+          .getPublicUrl(downloadPath).data.publicUrl;
+
+        const message = await supabaseServer.from("Message").insert({
+          content: 'Video generated successfully.',
+          fileUrl: publicUrl,
+          role: "assistant",
+          chatSessionId: input.chatSessionId
+        }).select("*").single();
+
+        console.log("Message saved:", message.data);
+        fs.unlinkSync(downloadPath);
+        return { ...message.data, timestamp: message.data.created_at }
+
+      } else {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate video: No video found in response.",
+        });
+      }
     }),
 });
 

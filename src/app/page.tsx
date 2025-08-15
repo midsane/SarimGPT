@@ -1,5 +1,4 @@
 "use client"
-import { v4 as uuidv4 } from 'uuid';
 import type React from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
@@ -24,7 +23,8 @@ import {
   LoaderIcon,
   Loader2,
   Download,
-  EllipsisVertical
+  EllipsisVertical,
+  VideoIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/toggle-theme"
@@ -33,9 +33,15 @@ import { NotAuthorisedDialogBox } from "@/components/dialogBox"
 import { trpc } from "@/util/trpc"
 import { toast } from "sonner"
 import { PageLoader } from "@/components/pageLoader"
-import { ChatSession, formatTime, userStateFiltered } from '@/util/chatbotUtility';
+import { ChatSession, downloadFile, formatTime, userStateFiltered } from '@/util/chatbotUtility';
 
 import Image from "next/image"
+enum generationType {
+  IMAGE = "image",
+  VIDEO = "video",
+  TEXT = "text"
+}
+
 
 export default function ChatbotUI() {
 
@@ -70,7 +76,7 @@ export default function ChatbotUI() {
     setInputValue(e.target.value)
   }
 
-  const [imageGenerationEnabled, setImageGenerationEnabled] = useState(false)
+  const [generationState, setGenerationState] = useState<generationType>(generationType.TEXT)
   const activeSession = chatSessions.find((s) => s.id === activeSessionId)
 
   const scrollToBottom = () => {
@@ -80,31 +86,6 @@ export default function ChatbotUI() {
   useEffect(() => {
     scrollToBottom()
   }, [activeSession?.messages, activeSessionId, creatingUserMsg])
-
-
-  const handleDownloadImage = async (url: string) => {
-    if (!url) return;
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Network response was not ok.");
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = blobUrl;
-      a.download = `Sarimgpt-image-${uuidv4()}.png`; // Uses uuid for a unique filename
-      document.body.appendChild(a);
-      a.click();
-
-      window.URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-      toast.success("Image download started!");
-    } catch (error) {
-      console.error("Could not download the image:", error);
-      toast.error("Image download failed.");
-    }
-  };
 
   const handleSubmit = async () => {
     if (inputValue?.trim() === "" || creatingUserMsg || isTyping) {
@@ -124,6 +105,33 @@ export default function ChatbotUI() {
   const generateImageMutation = trpc.generateImage.useMutation({
     onSuccess: (data) => {
       console.log("Image generated successfully:", data);
+      setChatSessions(prev => {
+        const newState = prev.map(session => {
+          if (session.id === activeSessionId) {
+            return {
+              ...session,
+              messages: [
+                ...session.messages,
+                {
+                  id: data.id,
+                  content: data.content,
+                  fileUrl: data.fileUrl,
+                  role: data.role,
+                  timestamp: data.timestamp
+                }
+              ]
+            }
+          }
+          return session
+        })
+        return newState
+      })
+    }
+  });
+
+  const generateVideoMutation = trpc.generateVideo.useMutation({
+    onSuccess: (data) => {
+      console.log("Video generated successfully:", data);
       setChatSessions(prev => {
         const newState = prev.map(session => {
           if (session.id === activeSessionId) {
@@ -210,7 +218,6 @@ export default function ChatbotUI() {
     }
   });
 
-
   const sendMessage = async () => {
     if (!activeSessionId) {
       toast.error("No active chat session found. Please start a new chat.")
@@ -225,8 +232,11 @@ export default function ChatbotUI() {
     setIsTyping(true);
     setCreatingUserMsg(false)
 
-    if (imageGenerationEnabled) {
+    if (generationState === generationType.IMAGE) {
       await generateImageMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
+    }
+    else if (generationState === generationType.VIDEO) {
+      await generateVideoMutation.mutateAsync({ prompt: inputValue, chatSessionId: activeSessionId });
     }
     else {
       //prompt 
@@ -247,7 +257,6 @@ export default function ChatbotUI() {
     setIsTyping(false)
     setInputValue("")
   }
-
 
   const {
     isLoading,
@@ -319,7 +328,6 @@ export default function ChatbotUI() {
       {!fetchedUserData && <SimpleLoader />}
       <PageLoader isLoading={isLoading} onComplete={() => { }} />
 
-      {/* ✨ NEW/MODIFIED: Image Enlarge Modal */}
       <AnimatePresence>
         {enlargedImageUrl && (
           <motion.div
@@ -334,18 +342,40 @@ export default function ChatbotUI() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              onClick={(e) => e.stopPropagation()} // Prevent closing modal when clicking on the content
+              onClick={(e) => e.stopPropagation()}
               className="relative bg-card p-4 rounded-xl shadow-2xl max-w-4xl max-h-[90vh] flex flex-col gap-4 cursor-default"
             >
-              <Image
-                src={enlargedImageUrl}
-                alt="Enlarged view"
-                className="object-contain w-full h-full max-w-full max-h-[calc(90vh-100px)]"
-              />
+              {(
+                (() => {
+                  const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(enlargedImageUrl || "");
+                  const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(enlargedImageUrl || "");
+                  if (isImage) {
+                    return (
+                      <Image
+                        src={enlargedImageUrl}
+                        alt="Enlarged view"
+                        className="object-contain w-full h-full max-w-full max-h-[calc(90vh-100px)]"
+                      />
+                    );
+                  }
+                  if (isVideo) {
+                    return (
+                      <video
+                        src={enlargedImageUrl}
+                        controls
+                        className="object-contain w-full h-full max-w-full max-h-[calc(90vh-100px)]"
+                      />
+                    );
+                  }
+                  return null;
+                })()
+              )}
+
+
               <div className="flex justify-center items-center gap-4">
                 <Button
                   variant="outline"
-                  onClick={() => handleDownloadImage(enlargedImageUrl)}
+                  onClick={() => downloadFile(enlargedImageUrl)}
                   className="flex items-center gap-2"
                 >
                   <Download className="w-5 h-5" />
@@ -503,17 +533,38 @@ export default function ChatbotUI() {
 
 
                     {message.fileUrl && message.fileUrl?.trim() !== "" && (
-                      <div className='rounded-xl relative w-fit'>
-                        <Image
-                          src={message.fileUrl}
-                          alt="Generated"
-                          className="max-w-40 rounded-xl "
-
-                        />
-                        <EllipsisVertical
-                          onClick={() => setEnlargedImageUrl(message.fileUrl)}
-                          size={25} className='absolute bottom-1 cursor-pointer  p-1 bg-background/60 rounded-sm right-1' />
-                      </div>
+                      (() => {
+                        const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(message.fileUrl || "");
+                        const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(message.fileUrl || "");
+                        if (isImage) {
+                          return (
+                            <div className='rounded-xl relative w-fit'>
+                              <Image
+                                src={message.fileUrl || ""}
+                                alt="Generated"
+                                className="max-w-40 rounded-xl"
+                              />
+                              <EllipsisVertical
+                                onClick={() => setEnlargedImageUrl(message.fileUrl)}
+                                size={25}
+                                className='absolute bottom-1 cursor-pointer p-1 bg-background/60 rounded-sm right-1'
+                              />
+                            </div>
+                          );
+                        }
+                        if (isVideo) {
+                          return (
+                            <div className='rounded-xl relative w-fit'>
+                              <video
+                                src={message.fileUrl}
+                                controls
+                                className="max-w-40 rounded-xl"
+                              />
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
                     )}
                   </div>
                   {message.role === "user" && (
@@ -575,12 +626,31 @@ export default function ChatbotUI() {
                 />
                 <div className="flex gap-1 justify-end">
                   <Button
-                    onClick={() => setImageGenerationEnabled(prev => !prev)}
+                    onClick={() => setGenerationState((prev) => {
+                      if (prev === generationType.IMAGE) {
+                        return generationType.TEXT;
+                      }
+                      return generationType.IMAGE;
+                    })}
                     size="sm"
-                    className={`p-0 rounded-full bg-muted  hover:bg-muted cursor-pointer border text-muted-foreground ${imageGenerationEnabled && "bg-purple-500 hover:bg-purple-500 dark:bg-amber-300 dark:hover:bg-amber-300 text-background/90"}`}
+                    className={`p-0 rounded-full bg-muted  hover:bg-muted cursor-pointer border text-muted-foreground ${generationState === generationType.IMAGE && "bg-purple-500 hover:bg-purple-500 dark:bg-amber-300 dark:hover:bg-amber-300 text-background/90"}`}
                   >
                     <ImageIcon className="w-4 h-4" />
-                    <p>Generate Image</p>
+                    <p>Image</p>
+                  </Button>
+
+                  <Button
+                    onClick={() => setGenerationState((prev) => {
+                      if (prev === generationType.VIDEO) {
+                        return generationType.TEXT;
+                      }
+                      return generationType.VIDEO;
+                    })}
+                    size="sm"
+                    className={`p-0 rounded-full bg-muted  hover:bg-muted cursor-pointer border text-muted-foreground ${generationState === generationType.VIDEO && "bg-purple-500 hover:bg-purple-500 dark:bg-amber-300 dark:hover:bg-amber-300 text-background/90"}`}
+                  >
+                    <VideoIcon className="w-4 h-4" />
+                    <p>Video </p>
                   </Button>
 
                   <Button

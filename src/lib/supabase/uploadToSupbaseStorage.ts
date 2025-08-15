@@ -1,6 +1,6 @@
 import { supabaseServer } from "./supabaseServerClient";
 
-export const uploadToSupabaseBucket = async (imageData: string): Promise<string | null> => {
+export const uploadImageToSupabaseBucket = async (imageData: string): Promise<string | null> => {
 
     const filename = `Image_${Date.now()}.png`;
     const buffer = Buffer.from(imageData, "base64");
@@ -17,7 +17,7 @@ export const uploadToSupabaseBucket = async (imageData: string): Promise<string 
     if (uploadError) {
         console.error("Error during Supabase upload:", uploadError.message);
         // If upload fails, stop and return null
-        return null;
+        throw new Error("Failed to upload image to Supabase");
     }
 
     // === STEP 2: GET THE PUBLIC URL FOR THE FILE YOU JUST UPLOADED ===
