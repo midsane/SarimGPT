@@ -7,6 +7,7 @@ import { uploadImageToSupabaseBucket } from "@/lib/supabase/uploadToSupbaseStora
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
+import { systemPrompt } from "@/util/chatbotUtility";
 
 const openai = new OpenAI({
   apiKey: process.env.SHIVAAY_API_KEY,
@@ -238,7 +239,7 @@ export const appRouter = t.router({
       const completion = await openai.chat.completions.create({
         model: "shivaay",
         messages: [
-          { role: "system", content: "You are a helpful assistant. your name is SarimGPT" },
+          { role: "system", content: systemPrompt},
           ...input.prompt,
         ],
       });
