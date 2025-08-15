@@ -157,10 +157,17 @@ export default function ChatbotUI() {
     } else if (generationState === generationType.VIDEO) {
       await generateVideoMutation.mutateAsync({ prompt: content, chatSessionId: activeSessionId });
     } else {
-      const appendedPrompt = activeSession?.messages.map(msg => ({
+      const sortedMessage = activeSession?.messages.sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      ) ?? [];
+
+      const appendedPrompt = sortedMessage.map(msg => ({
         role: msg.role,
         content: msg.content ?? "",
       })) ?? [];
+
+      appendedPrompt.push({ role: "user", content: content });
+
       await generateTextMutation.mutateAsync({ prompt: appendedPrompt, chatSessionId: activeSessionId });
     }
     setIsTyping(false);

@@ -239,7 +239,7 @@ export const appRouter = t.router({
         model: "shivaay",
         messages: [
           { role: "system", content: "You are a helpful assistant. your name is SarimGPT" },
-          ...input.prompt
+          ...input.prompt,
         ],
       });
 
